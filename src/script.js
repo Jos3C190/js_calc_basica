@@ -11,6 +11,7 @@ class Calculadora {
         // Almacena referencias a los elementos del DOM para mostrar los valores
         this.valorPrevioTextElement = valorPrevioTextElement
         this.valorActualTextElement = valorActualTextElement
+        this.resultadoMostrado = false // Flag para saber si se acaba de mostrar un resultado
         // Inicializa la calculadora limpiando todos los valores
         this.borrarTodo()
     }
@@ -22,6 +23,7 @@ class Calculadora {
         this.valorActual = ''      // Valor que se está ingresando actualmente
         this.valorPrevio = ''      // Valor que se usará para la operación
         this.operacion = undefined // Tipo de operación seleccionada (+, -, x, ÷)
+        this.operacionCompleta = '' // Cadena para mostrar la operación completa después de calcular
     }
 
     /**
@@ -37,6 +39,13 @@ class Calculadora {
      * @param {string} numero - El dígito o punto decimal a agregar
      */
     agregarNumero(numero) {
+        // Si el último fue un resultado y se presiona número, iniciar nueva operación
+        if (this.resultadoMostrado) {
+            this.valorActual = ''
+            this.resultadoMostrado = false
+        }
+        // Evita que se escriban más de 12 dígitos (Bug #1 solucionado)
+        if (this.valorActual.toString().length >= 12) return
         // Evita agregar múltiples puntos decimales
         if (numero === '.' && this.valorActual.includes('.')) return
         // Concatena el nuevo número al valor actual
@@ -73,7 +82,10 @@ class Calculadora {
         const valor_2 = parseFloat(this.valorActual)
         // Si algún valor no es un número válido, salir de la función
         if (isNaN(valor_1) || isNaN(valor_2)) return
-        
+
+        // Guarda la operación completa antes de calcular (Bug #4)
+        this.operacionCompleta = `${this.obtenerNumero(this.valorPrevio)} ${this.operacion} ${this.obtenerNumero(this.valorActual)}`
+
         // Realiza el cálculo según el tipo de operación
         switch (this.operacion) {
             case '+':
@@ -97,6 +109,16 @@ class Calculadora {
         // Limpia la operación y el valor previo
         this.operacion = undefined
         this.valorPrevio = ''
+        this.resultadoMostrado = true // Marca que se mostró un resultado (Bug #3)
+    }
+
+    /**
+     * Convierte el valor actual en porcentaje (Bug #2)
+     */
+    porcentaje() {
+        if (this.valorActual !== '') {
+            this.valorActual = parseFloat(this.valorActual) / 100
+        }
     }
 
     /**
@@ -136,7 +158,12 @@ class Calculadora {
         // Si hay una operación seleccionada, muestra el valor previo y la operación
         if (this.operacion != null) {
             this.valorPrevioTextElement.innerText = `${this.obtenerNumero(this.valorPrevio)} ${this.operacion}`
-        } else {
+        } 
+        // Si ya se calculó, muestra la operación completa
+        else if (this.resultadoMostrado && this.operacionCompleta) {
+            this.valorPrevioTextElement.innerText = this.operacionCompleta
+        } 
+        else {
             this.valorPrevioTextElement.innerText = ''
         }
     }
@@ -153,7 +180,7 @@ const numeroButtons = document.querySelectorAll('[data-numero]')
 const operacionButtons = document.querySelectorAll('[data-operacion]')
 // Captura del botón igual (=) para ejecutar cálculos
 const igualButton = document.querySelector('[data-igual]')
-// Captura del botón de porcentaje (%) - funcionalidad pendiente
+// Captura del botón de porcentaje (%) - funcionalidad implementada
 const porcentajeButton = document.querySelector('[data-porcentaje]')
 // Captura del botón para borrar último dígito (backspace)
 const borrarButton = document.querySelector('[data-borrar]')
@@ -210,6 +237,14 @@ borrarButton.addEventListener('click', _button => {
     calculator.borrar()
     calculator.actualizarPantalla()
 })
+
+// Evento para el botón de porcentaje (%)
+// Convierte el valor actual en porcentaje
+porcentajeButton.addEventListener('click', _button => {
+    calculator.porcentaje()
+    calculator.actualizarPantalla()
+})
+
 
 /*Laboratorio:
 1. Arreglar bug que limite los numeros en pantalla
